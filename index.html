@@ -1,0 +1,4165 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+<meta charset="UTF-8">
+
+<title>
+GIS-Based Urban Flood Risk Mapping and Emergency Route Planning
+</title>
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+
+<!-- ================= LEAFLET ================= -->
+
+<link
+rel="stylesheet"
+href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+/>
+
+
+<!-- ================= ROUTING ================= -->
+
+<link
+rel="stylesheet"
+href="https://unpkg.com/leaflet-routing-machine@3.2.12/dist/leaflet-routing-machine.css"
+/>
+
+
+<!-- ================= MARKER CLUSTER ================= -->
+
+<link
+rel="stylesheet"
+href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css"
+/>
+
+<link
+rel="stylesheet"
+href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css"
+/>
+
+
+<style>
+
+/* =========================================================
+   BASIC
+========================================================= */
+
+* {
+    box-sizing: border-box;
+}
+
+body {
+    margin: 0;
+    font-family: Arial, Helvetica, sans-serif;
+    background: #eef2f5;
+    color: #222;
+}
+
+
+/* =========================================================
+   HEADER
+========================================================= */
+
+header {
+    background: linear-gradient(
+        135deg,
+        #12355b,
+        #176b87
+    );
+
+    color: white;
+
+    padding: 20px 25px;
+
+    box-shadow:
+        0 2px 8px rgba(0,0,0,0.2);
+
+    position: relative;
+
+    z-index: 1001;
+}
+
+.header-title {
+    font-size: 25px;
+    font-weight: bold;
+    margin: 0;
+}
+
+.header-subtitle {
+    margin-top: 7px;
+    font-size: 14px;
+    opacity: 0.92;
+}
+
+.header-badge {
+    display: inline-block;
+
+    margin-top: 10px;
+
+    padding: 5px 10px;
+
+    border-radius: 20px;
+
+    background: rgba(255,255,255,0.15);
+
+    font-size: 12px;
+}
+
+
+/* =========================================================
+   MAIN LAYOUT
+========================================================= */
+
+.main-container {
+    display: flex;
+
+    height: calc(100vh - 105px);
+}
+
+
+/* =========================================================
+   SIDEBAR
+========================================================= */
+
+.sidebar {
+    width: 34%;
+
+    min-width: 350px;
+
+    background: #f7f9fb;
+
+    overflow-y: auto;
+
+    padding: 15px;
+
+    border-right: 1px solid #d5dce2;
+}
+
+
+/* scrollbar */
+
+.sidebar::-webkit-scrollbar {
+    width: 7px;
+}
+
+.sidebar::-webkit-scrollbar-thumb {
+    background: #b8c3cc;
+    border-radius: 10px;
+}
+
+
+/* =========================================================
+   MAP
+========================================================= */
+
+.map-container {
+    width: 66%;
+
+    position: relative;
+}
+
+#map {
+    width: 100%;
+    height: 100%;
+}
+
+
+/* =========================================================
+   SECTION
+========================================================= */
+
+.section {
+    background: white;
+
+    border: 1px solid #dce2e7;
+
+    border-radius: 10px;
+
+    padding: 14px;
+
+    margin-bottom: 13px;
+
+    box-shadow:
+        0 2px 6px rgba(0,0,0,0.04);
+}
+
+.section h3 {
+    margin: 0 0 12px 0;
+
+    color: #12355b;
+
+    font-size: 16px;
+
+    border-bottom: 1px solid #e8edf1;
+
+    padding-bottom: 8px;
+}
+
+
+/* =========================================================
+   LABELS
+========================================================= */
+
+label {
+    display: block;
+
+    font-size: 12px;
+
+    font-weight: bold;
+
+    margin-top: 8px;
+
+    margin-bottom: 5px;
+
+    color: #394b59;
+}
+
+
+/* =========================================================
+   INPUT
+========================================================= */
+
+input[type="text"] {
+    width: 100%;
+
+    padding: 10px 11px;
+
+    border: 1px solid #c8d0d7;
+
+    border-radius: 6px;
+
+    font-size: 13px;
+
+    outline: none;
+
+    background: #fff;
+
+    transition: 0.2s;
+}
+
+input[type="text"]:focus {
+    border-color: #176b87;
+
+    box-shadow:
+        0 0 0 2px rgba(23,107,135,0.12);
+}
+
+
+/* =========================================================
+   BUTTONS
+========================================================= */
+
+button {
+    width: 100%;
+
+    padding: 10px;
+
+    margin-top: 8px;
+
+    border: none;
+
+    border-radius: 6px;
+
+    background: #176b87;
+
+    color: white;
+
+    font-size: 13px;
+
+    font-weight: bold;
+
+    cursor: pointer;
+
+    transition: 0.2s;
+}
+
+button:hover {
+    background: #124f65;
+
+    transform: translateY(-1px);
+}
+
+.route-button {
+    background: #0b7a4b;
+
+    font-size: 14px;
+}
+
+.route-button:hover {
+    background: #075d39;
+}
+
+.reset-button {
+    background: #6c757d;
+}
+
+.reset-button:hover {
+    background: #555c61;
+}
+
+
+/* =========================================================
+   WEATHER
+========================================================= */
+
+.weather-box {
+    background: #f0f8ff;
+
+    border-left: 4px solid #198ac0;
+
+    border-radius: 6px;
+
+    padding: 11px;
+
+    line-height: 1.65;
+
+    font-size: 13px;
+}
+
+
+/* =========================================================
+   ROUTE SUMMARY
+========================================================= */
+
+.route-summary {
+    background: #f1fbf5;
+
+    border-left: 4px solid #0b7a4b;
+
+    border-radius: 6px;
+
+    padding: 11px;
+
+    line-height: 1.7;
+
+    font-size: 13px;
+}
+
+
+/* =========================================================
+   ROUTE STATUS
+========================================================= */
+
+.route-status {
+    padding: 12px;
+
+    border-radius: 7px;
+
+    font-size: 13px;
+
+    font-weight: bold;
+
+    line-height: 1.5;
+}
+
+.status-safe {
+    background: #e6f6ec;
+
+    color: #176b3a;
+
+    border: 1px solid #a8d9ba;
+}
+
+.status-warning {
+    background: #fff7df;
+
+    color: #805f00;
+
+    border: 1px solid #ead18a;
+}
+
+.status-danger {
+    background: #fff0f0;
+
+    color: #a32020;
+
+    border: 1px solid #e5aaaa;
+}
+
+
+/* =========================================================
+   DASHBOARD
+========================================================= */
+
+.dashboard-grid {
+    display: grid;
+
+    grid-template-columns: 1fr 1fr;
+
+    gap: 8px;
+}
+
+.dashboard-card {
+    background: #f8fafc;
+
+    border: 1px solid #e1e7ec;
+
+    border-radius: 7px;
+
+    padding: 9px;
+
+    font-size: 11px;
+}
+
+.dashboard-card b {
+    display: block;
+
+    color: #51616e;
+
+    margin-bottom: 5px;
+}
+
+.dashboard-value {
+    font-size: 14px;
+
+    font-weight: bold;
+
+    color: #12355b;
+}
+
+.dashboard-recommendation {
+    grid-column: 1 / -1;
+
+    background: #effaf3;
+
+    border: 1px solid #8dcc9f;
+
+    border-left: 5px solid #0b7a4b;
+
+    border-radius: 7px;
+
+    padding: 11px;
+
+    font-size: 12px;
+
+    line-height: 1.6;
+}
+
+.dashboard-warning {
+    grid-column: 1 / -1;
+
+    background: #fff3f3;
+
+    border: 1px solid #e2aaaa;
+
+    border-left: 5px solid #c62828;
+
+    border-radius: 7px;
+
+    padding: 11px;
+
+    font-size: 12px;
+
+    line-height: 1.6;
+}
+
+
+/* =========================================================
+   FACILITY FILTERS
+========================================================= */
+
+.facility-filter {
+    display: flex;
+
+    align-items: center;
+
+    gap: 7px;
+
+    padding: 6px 7px;
+
+    margin: 3px 0;
+
+    border-radius: 5px;
+
+    background: #f7f9fb;
+
+    font-size: 12px;
+
+    font-weight: normal;
+
+    cursor: pointer;
+}
+
+.facility-filter:hover {
+    background: #eef3f6;
+}
+
+.facility-filter input {
+    width: auto;
+
+    margin: 0;
+}
+
+
+/* =========================================================
+   FACILITY RESULTS
+========================================================= */
+
+.facility-results {
+    max-height: 420px;
+
+    overflow-y: auto;
+
+    margin-top: 10px;
+}
+
+.facility-card {
+    background: #fff;
+
+    border: 1px solid #dce2e7;
+
+    border-radius: 7px;
+
+    padding: 10px;
+
+    margin-bottom: 8px;
+
+    font-size: 12px;
+
+    line-height: 1.55;
+}
+
+.facility-card h4 {
+    margin: 0 0 6px 0;
+
+    color: #12355b;
+
+    font-size: 13px;
+}
+
+.facility-card.risky {
+    background: #fff6f6;
+
+    border: 1px solid #e1aaaa;
+
+    border-left: 4px solid #c62828;
+}
+
+
+/* =========================================================
+   RECOMMENDATION
+========================================================= */
+
+.recommendation-box {
+    background: #effaf3;
+
+    border: 1px solid #8dcc9f;
+
+    border-left: 5px solid #0b7a4b;
+
+    border-radius: 7px;
+
+    padding: 11px;
+
+    margin-bottom: 10px;
+
+    font-size: 12px;
+
+    line-height: 1.55;
+}
+
+.warning-box {
+    background: #fff4f4;
+
+    border: 1px solid #e0aaaa;
+
+    border-left: 5px solid #c62828;
+
+    border-radius: 7px;
+
+    padding: 11px;
+
+    margin-bottom: 10px;
+
+    font-size: 12px;
+
+    line-height: 1.55;
+}
+
+
+/* =========================================================
+   SMALL NOTE
+========================================================= */
+
+.small-note {
+    font-size: 11px;
+
+    color: #697781;
+
+    line-height: 1.5;
+}
+
+
+/* =========================================================
+   METHODOLOGY
+========================================================= */
+
+.methodology ol {
+    padding-left: 20px;
+
+    margin-bottom: 0;
+}
+
+.methodology li {
+    margin-bottom: 7px;
+
+    font-size: 12px;
+
+    line-height: 1.4;
+}
+
+
+/* =========================================================
+   GIS INFO
+========================================================= */
+
+.gis-info {
+    position: absolute;
+
+    top: 15px;
+
+    right: 15px;
+
+    z-index: 1000;
+
+    background: rgba(255,255,255,0.96);
+
+    padding: 11px 13px;
+
+    border-radius: 8px;
+
+    box-shadow:
+        0 2px 8px rgba(0,0,0,0.2);
+
+    font-size: 11px;
+
+    line-height: 1.5;
+}
+
+
+/* =========================================================
+   LEGEND
+========================================================= */
+
+.legend {
+    background: rgba(255,255,255,0.96);
+
+    padding: 10px 12px;
+
+    border-radius: 8px;
+
+    box-shadow:
+        0 2px 8px rgba(0,0,0,0.25);
+
+    line-height: 1.7;
+
+    font-size: 11px;
+}
+
+.legend-title {
+    font-weight: bold;
+
+    color: #12355b;
+
+    margin-bottom: 4px;
+}
+
+.legend-item {
+    display: flex;
+
+    align-items: center;
+
+    gap: 6px;
+}
+
+.legend-color {
+    width: 13px;
+
+    height: 13px;
+
+    display: inline-block;
+
+    border-radius: 3px;
+}
+
+
+/* =========================================================
+   MOBILE
+========================================================= */
+
+@media(max-width: 950px) {
+
+    .main-container {
+        flex-direction: column;
+
+        height: auto;
+    }
+
+    .sidebar {
+        width: 100%;
+
+        min-width: 0;
+
+        max-height: 60vh;
+    }
+
+    .map-container {
+        width: 100%;
+
+        height: 65vh;
+    }
+
+    .header-title {
+        font-size: 19px;
+    }
+
+}
+
+</style>
+
+</head>
+
+
+<body>
+
+
+<!-- =========================================================
+     HEADER
+========================================================= -->
+
+<header>
+
+    <div class="header-title">
+        🌧️ GIS-Based Urban Flood Risk Mapping
+        and Emergency Route Planning
+    </div>
+
+    <div class="header-subtitle">
+        Flood-Aware Emergency Decision Support System
+    </div>
+
+    <div class="header-badge">
+        GIS • Weather • Flood Risk • Routing • Emergency Facilities
+    </div>
+
+</header>
+
+
+
+<div class="main-container">
+
+
+<!-- =========================================================
+     SIDEBAR
+========================================================= -->
+
+<div class="sidebar">
+
+
+<!-- ================= LOCATION ================= -->
+
+<div class="section">
+
+    <h3>📍 Location / State</h3>
+
+    <label>
+        Search Location
+    </label>
+
+    <input
+        type="text"
+        id="generalSearch"
+        placeholder="Example: Bengaluru, Karnataka"
+    >
+
+    <button onclick="searchGeneralLocation()">
+        🔎 Search Location
+    </button>
+
+</div>
+
+
+
+<!-- ================= START ================= -->
+
+<div class="section">
+
+    <h3>🚩 Start Location</h3>
+
+    <input
+        type="text"
+        id="startSearch"
+        placeholder="Example: Majestic, Bengaluru"
+    >
+
+    <button onclick="searchStartLocation()">
+        Set Start Location
+    </button>
+
+</div>
+
+
+
+<!-- ================= DESTINATION ================= -->
+
+<div class="section">
+
+    <h3>🏁 Destination</h3>
+
+    <input
+        type="text"
+        id="destinationSearch"
+        placeholder="Example: Victoria Hospital, Bengaluru"
+    >
+
+    <button onclick="searchDestinationLocation()">
+        Set Destination
+    </button>
+
+</div>
+
+
+
+<!-- ================= WEATHER ================= -->
+
+<div class="section">
+
+    <h3>🌧️ Current Weather</h3>
+
+    <div
+        class="weather-box"
+        id="weatherBox"
+    >
+        Search a location to load current weather.
+    </div>
+
+</div>
+
+
+
+<!-- ================= ROUTE ================= -->
+
+<div class="section">
+
+    <h3>🚑 Emergency Route Planning</h3>
+
+    <button
+        class="route-button"
+        onclick="calculateEmergencyRoute()"
+    >
+        🚨 Calculate Emergency Route
+    </button>
+
+    <button
+        class="reset-button"
+        onclick="resetApplication()"
+    >
+        ↻ Clear / Reset
+    </button>
+
+</div>
+
+
+
+<!-- ================= DASHBOARD ================= -->
+
+<div class="section">
+
+    <h3>
+        📊 Emergency Decision Dashboard
+    </h3>
+
+    <div id="decisionDashboard">
+
+        <p class="small-note">
+            Calculate an emergency route to generate
+            the decision summary.
+        </p>
+
+    </div>
+
+</div>
+
+
+
+<!-- ================= ROUTE SUMMARY ================= -->
+
+<div class="section">
+
+    <h3>
+        🛣️ Route Summary
+    </h3>
+
+    <div
+        class="route-summary"
+        id="routeSummary"
+    >
+        Select start and destination to calculate route.
+    </div>
+
+</div>
+
+
+
+<!-- ================= ROUTE LOCATIONS ================= -->
+
+<div class="section">
+
+    <h3>
+        📍 Route Locations
+    </h3>
+
+    <div id="routeLocations">
+
+        <p class="small-note">
+            Start and destination locations will appear here.
+        </p>
+
+    </div>
+
+</div>
+
+
+
+<!-- ================= FACILITIES ================= -->
+
+<div class="section">
+
+    <h3>
+        🚨 Emergency Facilities Near Route
+    </h3>
+
+
+    <label class="facility-filter">
+
+        <input
+            type="checkbox"
+            id="hospitalFilter"
+            checked
+            onchange="updateFacilityLayers()"
+        >
+
+        🏥 Hospitals
+
+    </label>
+
+
+    <label class="facility-filter">
+
+        <input
+            type="checkbox"
+            id="shelterFilter"
+            checked
+            onchange="updateFacilityLayers()"
+        >
+
+        🏠 Shelters
+
+    </label>
+
+
+    <label class="facility-filter">
+
+        <input
+            type="checkbox"
+            id="fireFilter"
+            checked
+            onchange="updateFacilityLayers()"
+        >
+
+        🚒 Fire Stations
+
+    </label>
+
+
+    <label class="facility-filter">
+
+        <input
+            type="checkbox"
+            id="policeFilter"
+            checked
+            onchange="updateFacilityLayers()"
+        >
+
+        👮 Police Stations
+
+    </label>
+
+
+    <label class="facility-filter">
+
+        <input
+            type="checkbox"
+            id="ambulanceFilter"
+            checked
+            onchange="updateFacilityLayers()"
+        >
+
+        🚑 Ambulance Stations
+
+    </label>
+
+
+    <div
+        class="facility-results"
+        id="facilityResults"
+    >
+
+        <p class="small-note">
+            Calculate a route to find emergency
+            facilities near the selected route.
+        </p>
+
+    </div>
+
+</div>
+
+
+
+<!-- ================= STATUS ================= -->
+
+<div class="section">
+
+    <h3>
+        ⚠️ Route Status
+    </h3>
+
+    <div
+        id="routeStatus"
+        class="route-status status-safe"
+    >
+        Waiting for route calculation.
+    </div>
+
+</div>
+
+
+
+<!-- ================= METHODOLOGY ================= -->
+
+<div class="section methodology">
+
+    <h3>
+        🔬 Project Methodology
+    </h3>
+
+    <ol>
+
+        <li>
+            Collect location and environmental data
+        </li>
+
+        <li>
+            Obtain current weather information
+        </li>
+
+        <li>
+            Display GIS flood-risk zones
+        </li>
+
+        <li>
+            Calculate emergency road route
+        </li>
+
+        <li>
+            Identify emergency facilities near route
+        </li>
+
+        <li>
+            Check facility proximity to flood-risk zones
+        </li>
+
+        <li>
+            Recommend safer emergency facilities
+        </li>
+
+        <li>
+            Generate emergency decision dashboard
+        </li>
+
+        <li>
+            Provide flood-aware emergency decision support
+        </li>
+
+    </ol>
+
+</div>
+
+
+</div>
+
+
+
+<!-- =========================================================
+     MAP
+========================================================= -->
+
+<div class="map-container">
+
+
+    <div class="gis-info">
+
+        <b>🗺️ GIS Flood-Aware Map</b>
+
+        <br>
+
+        Search → Route → Flood Analysis
+
+        <br>
+
+        → Facilities → Decision Support
+
+    </div>
+
+
+    <div id="map"></div>
+
+
+</div>
+
+
+</div>
+
+
+
+<!-- =========================================================
+     JAVASCRIPT LIBRARIES
+========================================================= -->
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+<script src="https://unpkg.com/@turf/turf@7/turf.min.js"></script>
+
+<script src="https://unpkg.com/leaflet-routing-machine@3.2.12/dist/leaflet-routing-machine.js"></script>
+
+<script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
+
+
+
+<script>
+
+/* =========================================================
+   MAP
+========================================================= */
+
+const map =
+    L.map("map").setView(
+        [22.5, 79.0],
+        5
+    );
+
+
+L.tileLayer(
+    "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
+    {
+        attribution:
+            "&copy; OpenStreetMap contributors"
+    }
+).addTo(map);
+
+
+
+/* =========================================================
+   VARIABLES
+========================================================= */
+
+let startPoint = null;
+
+let destinationPoint = null;
+
+let startMarker = null;
+
+let destinationMarker = null;
+
+let routingControl = null;
+
+let alternativeRouteLayer = null;
+
+let floodZoneLayer = null;
+
+let currentRouteCoordinates = [];
+
+let currentRouteLine = null;
+
+let currentRouteFacilities = [];
+
+let currentRainfall = null;
+
+let routeHighCount = 0;
+
+let routeMediumCount = 0;
+
+let routeLowCount = 0;
+
+let currentRouteDistance = 0;
+
+let currentRouteTime = 0;
+
+
+
+/* =========================================================
+   FACILITY ARRAYS
+========================================================= */
+
+let realHospitals = [];
+
+let realShelters = [];
+
+let realFireStations = [];
+
+let realPoliceStations = [];
+
+let realAmbulanceStations = [];
+
+
+
+/* =========================================================
+   CLUSTER OPTIONS
+========================================================= */
+
+const clusterOptions = {
+
+    chunkedLoading: true,
+
+    maxClusterRadius: 60,
+
+    spiderfyOnMaxZoom: true,
+
+    showCoverageOnHover: false,
+
+    zoomToBoundsOnClick: true
+
+};
+
+
+const hospitalLayer =
+    L.markerClusterGroup(
+        clusterOptions
+    );
+
+
+const shelterLayer =
+    L.markerClusterGroup(
+        clusterOptions
+    );
+
+
+const fireLayer =
+    L.markerClusterGroup(
+        clusterOptions
+    );
+
+
+const policeLayer =
+    L.markerClusterGroup(
+        clusterOptions
+    );
+
+
+const ambulanceLayer =
+    L.markerClusterGroup(
+        clusterOptions
+    );
+
+
+
+/* =========================================================
+   LOAD FLOOD ZONES
+========================================================= */
+
+fetch("flood_zones.geojson")
+
+.then(response => {
+
+    if (!response.ok) {
+
+        throw new Error(
+            "Unable to load flood_zones.geojson"
+        );
+
+    }
+
+    return response.json();
+
+})
+
+.then(data => {
+
+    floodZoneLayer =
+        L.geoJSON(
+            data,
+            {
+
+                style:
+                    function(feature) {
+
+                        const risk =
+                            feature.properties.risk;
+
+                        let fillColor =
+                            "#28a745";
+
+                        if (
+                            risk === "Medium"
+                        ) {
+
+                            fillColor =
+                                "#ff9800";
+
+                        }
+
+                        if (
+                            risk === "High"
+                        ) {
+
+                            fillColor =
+                                "#dc3545";
+
+                        }
+
+                        return {
+
+                            color:
+                                fillColor,
+
+                            fillColor:
+                                fillColor,
+
+                            fillOpacity:
+                                0.35,
+
+                            weight: 2
+
+                        };
+
+                    },
+
+                onEachFeature:
+                    function(
+                        feature,
+                        layer
+                    ) {
+
+                        layer.bindPopup(
+
+                            "<b>Flood Risk:</b> "
+                            + feature.properties.risk
+                            + "<br>"
+                            + feature.properties.description
+
+                        );
+
+                    }
+
+            }
+        )
+        .addTo(map);
+
+})
+
+.catch(error => {
+
+    console.error(
+        "Flood GeoJSON error:",
+        error
+    );
+
+});
+
+
+
+/* =========================================================
+   GEOCODING
+========================================================= */
+
+async function geocodeAddress(
+    address
+) {
+
+    const url =
+
+        "https://nominatim.openstreetmap.org/search"
+        + "?format=jsonv2"
+        + "&limit=1"
+        + "&countrycodes=in"
+        + "&q="
+        + encodeURIComponent(
+            address
+        );
+
+
+    const response =
+        await fetch(url);
+
+
+    if (!response.ok) {
+
+        throw new Error(
+            "Location search failed."
+        );
+
+    }
+
+
+    const data =
+        await response.json();
+
+
+    if (!data.length) {
+
+        throw new Error(
+            "Location not found."
+        );
+
+    }
+
+
+    return {
+
+        lat:
+            Number(data[0].lat),
+
+        lon:
+            Number(data[0].lon),
+
+        displayName:
+            data[0].display_name
+
+    };
+
+}
+
+
+
+/* =========================================================
+   WEATHER
+========================================================= */
+
+async function loadWeather(
+    latitude,
+    longitude
+) {
+
+    const weatherBox =
+        document.getElementById(
+            "weatherBox"
+        );
+
+
+    weatherBox.innerHTML =
+        "Loading current weather...";
+
+
+    try {
+
+        const url =
+
+            "https://api.open-meteo.com/v1/forecast"
+            + "?latitude=" + latitude
+            + "&longitude=" + longitude
+            + "&current="
+            + "temperature_2m,"
+            + "relative_humidity_2m,"
+            + "precipitation,"
+            + "rain,"
+            + "weather_code"
+            + "&timezone=auto";
+
+
+        const response =
+            await fetch(url);
+
+
+        if (!response.ok) {
+
+            throw new Error(
+                "Weather request failed."
+            );
+
+        }
+
+
+        const data =
+            await response.json();
+
+
+        const current =
+            data.current;
+
+
+        currentRainfall =
+            Number(
+                current.precipitation
+            );
+
+
+        weatherBox.innerHTML =
+
+            "<b>Temperature:</b> "
+            + current.temperature_2m
+            + " °C<br>"
+
+            + "<b>Humidity:</b> "
+            + current.relative_humidity_2m
+            + " %<br>"
+
+            + "<b>Current Precipitation:</b> "
+            + current.precipitation
+            + " mm<br>"
+
+            + "<b>Rain:</b> "
+            + current.rain
+            + " mm<br>"
+
+            + "<b>Weather Code:</b> "
+            + current.weather_code
+
+            + "<br><br>"
+
+            + "<span class='small-note'>"
+            + "Current weather reading; "
+            + "not a long-term flood forecast."
+            + "</span>";
+
+    }
+
+    catch(error) {
+
+        console.error(
+            "Weather error:",
+            error
+        );
+
+
+        currentRainfall = null;
+
+
+        weatherBox.innerHTML =
+            "Unable to load current weather.";
+
+    }
+
+}
+
+
+
+/* =========================================================
+   LOCATION DATA
+========================================================= */
+
+async function loadLocationData(
+    latitude,
+    longitude
+) {
+
+    await loadWeather(
+        latitude,
+        longitude
+    );
+
+}
+
+
+
+/* =========================================================
+   GENERAL SEARCH
+========================================================= */
+
+async function searchGeneralLocation() {
+
+    const value =
+        document.getElementById(
+            "generalSearch"
+        ).value.trim();
+
+
+    if (!value) {
+
+        alert(
+            "Please enter a location."
+        );
+
+        return;
+
+    }
+
+
+    try {
+
+        const result =
+            await geocodeAddress(
+                value
+            );
+
+
+        map.setView(
+            [
+                result.lat,
+                result.lon
+            ],
+            13
+        );
+
+
+        await loadLocationData(
+            result.lat,
+            result.lon
+        );
+
+    }
+
+    catch(error) {
+
+        alert(
+            error.message
+        );
+
+    }
+
+}
+
+
+
+/* =========================================================
+   START LOCATION
+========================================================= */
+
+async function searchStartLocation() {
+
+    const value =
+        document.getElementById(
+            "startSearch"
+        ).value.trim();
+
+
+    if (!value) {
+
+        alert(
+            "Please enter the start location."
+        );
+
+        return;
+
+    }
+
+
+    try {
+
+        const result =
+            await geocodeAddress(
+                value
+            );
+
+
+        startPoint = {
+
+            lat:
+                result.lat,
+
+            lng:
+                result.lon
+
+        };
+
+
+        if (startMarker) {
+
+            map.removeLayer(
+                startMarker
+            );
+
+        }
+
+
+        startMarker =
+            L.marker(
+                [
+                    result.lat,
+                    result.lon
+                ]
+            )
+            .addTo(map)
+            .bindPopup(
+                "<b>🚩 Start Location</b><br>"
+                + result.displayName
+            )
+            .openPopup();
+
+
+        map.setView(
+            [
+                result.lat,
+                result.lon
+            ],
+            13
+        );
+
+
+        await loadLocationData(
+            result.lat,
+            result.lon
+        );
+
+
+        updateRouteLocations();
+
+    }
+
+    catch(error) {
+
+        alert(
+            error.message
+        );
+
+    }
+
+}
+
+
+
+/* =========================================================
+   DESTINATION
+========================================================= */
+
+async function searchDestinationLocation() {
+
+    const value =
+        document.getElementById(
+            "destinationSearch"
+        ).value.trim();
+
+
+    if (!value) {
+
+        alert(
+            "Please enter the destination."
+        );
+
+        return;
+
+    }
+
+
+    try {
+
+        const result =
+            await geocodeAddress(
+                value
+            );
+
+
+        destinationPoint = {
+
+            lat:
+                result.lat,
+
+            lng:
+                result.lon
+
+        };
+
+
+        if (destinationMarker) {
+
+            map.removeLayer(
+                destinationMarker
+            );
+
+        }
+
+
+        destinationMarker =
+            L.marker(
+                [
+                    result.lat,
+                    result.lon
+                ]
+            )
+            .addTo(map)
+            .bindPopup(
+                "<b>🏁 Destination</b><br>"
+                + result.displayName
+            )
+            .openPopup();
+
+
+        map.setView(
+            [
+                result.lat,
+                result.lon
+            ],
+            13
+        );
+
+
+        await loadLocationData(
+            result.lat,
+            result.lon
+        );
+
+
+        updateRouteLocations();
+
+    }
+
+    catch(error) {
+
+        alert(
+            error.message
+        );
+
+    }
+
+}
+
+
+
+/* =========================================================
+   ROUTE LOCATIONS
+========================================================= */
+
+function updateRouteLocations() {
+
+    const container =
+        document.getElementById(
+            "routeLocations"
+        );
+
+
+    let html = "";
+
+
+    if (startPoint) {
+
+        html +=
+
+            "<b>🚩 Start:</b><br>"
+            + startPoint.lat.toFixed(5)
+            + ", "
+            + startPoint.lng.toFixed(5)
+            + "<br><br>";
+
+    }
+
+
+    if (destinationPoint) {
+
+        html +=
+
+            "<b>🏁 Destination:</b><br>"
+            + destinationPoint.lat.toFixed(5)
+            + ", "
+            + destinationPoint.lng.toFixed(5);
+
+    }
+
+
+    if (!html) {
+
+        html =
+            "<p class='small-note'>"
+            + "Start and destination locations "
+            + "will appear here."
+            + "</p>";
+
+    }
+
+
+    container.innerHTML =
+        html;
+
+}
+
+
+
+/* =========================================================
+   CALCULATE ROUTE
+========================================================= */
+
+function calculateEmergencyRoute() {
+
+    if (!startPoint) {
+
+        alert(
+            "Please select the Start Location first."
+        );
+
+        return;
+
+    }
+
+
+    if (!destinationPoint) {
+
+        alert(
+            "Please select the Destination first."
+        );
+
+        return;
+
+    }
+
+
+    if (routingControl) {
+
+        map.removeControl(
+            routingControl
+        );
+
+        routingControl = null;
+
+    }
+
+
+    if (alternativeRouteLayer) {
+
+        map.removeLayer(
+            alternativeRouteLayer
+        );
+
+        alternativeRouteLayer = null;
+
+    }
+
+
+    clearFacilityLayers();
+
+
+    currentRouteFacilities = [];
+
+
+    document.getElementById(
+        "facilityResults"
+    ).innerHTML =
+
+        "<p class='small-note'>"
+        + "Calculating emergency route "
+        + "and finding nearby facilities..."
+        + "</p>";
+
+
+    document.getElementById(
+        "decisionDashboard"
+    ).innerHTML =
+
+        "<p class='small-note'>"
+        + "Generating emergency decision dashboard..."
+        + "</p>";
+
+
+    routingControl =
+        L.Routing.control({
+
+            waypoints: [
+
+                L.latLng(
+                    startPoint.lat,
+                    startPoint.lng
+                ),
+
+                L.latLng(
+                    destinationPoint.lat,
+                    destinationPoint.lng
+                )
+
+            ],
+
+            router:
+                L.Routing.osrmv1({
+
+                    serviceUrl:
+                        "https://router.project-osrm.org/route/v1"
+
+                }),
+
+            lineOptions: {
+
+                styles: [
+
+                    {
+                        color:
+                            "#0077b6",
+
+                        opacity:
+                            0.9,
+
+                        weight:
+                            6
+
+                    }
+
+                ]
+
+            },
+
+            addWaypoints:
+                false,
+
+            draggableWaypoints:
+                false,
+
+            routeWhileDragging:
+                false,
+
+            show:
+                false,
+
+            createMarker:
+                function() {
+
+                    return null;
+
+                }
+
+        })
+        .addTo(map);
+
+
+    routingControl.on(
+        "routesfound",
+        function(event) {
+
+            const route =
+                event.routes[0];
+
+
+            currentRouteCoordinates =
+                route.coordinates;
+
+
+            const geometryCoordinates =
+                route.coordinates.map(
+                    coord => [
+                        coord.lng,
+                        coord.lat
+                    ]
+                );
+
+
+            currentRouteLine =
+                turf.lineString(
+                    geometryCoordinates
+                );
+
+
+            currentRouteDistance =
+                route.summary.totalDistance;
+
+
+            currentRouteTime =
+                route.summary.totalTime;
+
+
+            fitRouteLocations();
+
+
+            showRouteSummary(
+                route
+            );
+
+
+            analyzeRouteFloodZones();
+
+
+            loadFacilitiesNearRoute(
+                route.coordinates
+            );
+
+        }
+    );
+
+
+    routingControl.on(
+        "routingerror",
+        function(error) {
+
+            console.error(
+                error
+            );
+
+
+            alert(
+                "Unable to calculate the road route. Please try again."
+            );
+
+        }
+    );
+
+}
+
+
+
+/* =========================================================
+   FIT ROUTE
+========================================================= */
+
+function fitRouteLocations() {
+
+    if (
+        !startPoint ||
+        !destinationPoint
+    ) {
+
+        return;
+
+    }
+
+
+    const bounds =
+        L.latLngBounds([
+
+            [
+                startPoint.lat,
+                startPoint.lng
+            ],
+
+            [
+                destinationPoint.lat,
+                destinationPoint.lng
+            ]
+
+        ]);
+
+
+    map.fitBounds(
+        bounds,
+        {
+            padding:
+                [50, 50]
+        }
+    );
+
+}
+
+
+
+/* =========================================================
+   ROUTE SUMMARY
+========================================================= */
+
+function showRouteSummary(
+    route
+) {
+
+    const distanceKm =
+        route.summary.totalDistance /
+        1000;
+
+
+    const timeMinutes =
+        Math.round(
+            route.summary.totalTime /
+            60
+        );
+
+
+    document.getElementById(
+        "routeSummary"
+    ).innerHTML =
+
+        "<b>🛣️ Route Distance:</b> "
+        + distanceKm.toFixed(2)
+        + " km<br>"
+
+        + "<b>⏱️ Estimated Travel Time:</b> "
+        + timeMinutes
+        + " minutes<br>"
+
+        + "<b>📍 Route Points:</b> "
+        + route.coordinates.length
+        + "<br>"
+
+        + "<b>🌐 Routing:</b> "
+        + "OpenStreetMap / OSRM";
+
+}
+
+
+
+/* =========================================================
+   ROUTE FLOOD ANALYSIS
+========================================================= */
+
+function analyzeRouteFloodZones() {
+
+    routeHighCount = 0;
+
+    routeMediumCount = 0;
+
+    routeLowCount = 0;
+
+
+    if (
+        !currentRouteCoordinates.length
+    ) {
+
+        return;
+
+    }
+
+
+    if (!floodZoneLayer) {
+
+        setRouteStatus(
+            "Route calculated. Flood-zone data is not available.",
+            "warning"
+        );
+
+
+        updateDecisionDashboard();
+
+        return;
+
+    }
+
+
+    currentRouteCoordinates.forEach(
+        coord => {
+
+            const point =
+                turf.point([
+                    coord.lng,
+                    coord.lat
+                ]);
+
+
+            floodZoneLayer.eachLayer(
+                layer => {
+
+                    if (
+                        layer.feature &&
+                        layer.feature.geometry
+                    ) {
+
+                        const inside =
+                            turf.booleanPointInPolygon(
+                                point,
+                                layer.feature
+                            );
+
+
+                        if (inside) {
+
+                            const risk =
+                                layer.feature
+                                .properties
+                                .risk;
+
+
+                            if (
+                                risk === "High"
+                            ) {
+
+                                routeHighCount++;
+
+                            }
+
+                            else if (
+                                risk === "Medium"
+                            ) {
+
+                                routeMediumCount++;
+
+                            }
+
+                            else {
+
+                                routeLowCount++;
+
+                            }
+
+                        }
+
+                    }
+
+                }
+            );
+
+        }
+    );
+
+
+    if (
+        routeHighCount > 0
+    ) {
+
+        setRouteStatus(
+
+            "⚠️ HIGH FLOOD-RISK AREA DETECTED ON THE ROUTE. "
+            + "Check the available emergency facilities "
+            + "and consider safer route options.",
+
+            "danger"
+
+        );
+
+    }
+
+    else if (
+        routeMediumCount > 0
+    ) {
+
+        setRouteStatus(
+
+            "⚠️ MEDIUM FLOOD-RISK AREA DETECTED. "
+            + "Proceed with caution and check emergency facilities.",
+
+            "warning"
+
+        );
+
+    }
+
+    else {
+
+        setRouteStatus(
+
+            "✅ No current sample flood-risk zone "
+            + "was detected along the calculated route.",
+
+            "safe"
+
+        );
+
+    }
+
+
+    updateDecisionDashboard();
+
+}
+
+
+
+/* =========================================================
+   ROUTE STATUS
+========================================================= */
+
+function setRouteStatus(
+    message,
+    type
+) {
+
+    const box =
+        document.getElementById(
+            "routeStatus"
+        );
+
+
+    box.innerHTML =
+        message;
+
+
+    box.className =
+        "route-status";
+
+
+    if (
+        type === "danger"
+    ) {
+
+        box.classList.add(
+            "status-danger"
+        );
+
+    }
+
+    else if (
+        type === "warning"
+    ) {
+
+        box.classList.add(
+            "status-warning"
+        );
+
+    }
+
+    else {
+
+        box.classList.add(
+            "status-safe"
+        );
+
+    }
+
+}
+
+
+
+/* =========================================================
+   LOAD FACILITIES
+========================================================= */
+
+async function loadFacilitiesNearRoute(
+    coordinates
+) {
+
+    if (!coordinates.length) {
+
+        return;
+
+    }
+
+
+    try {
+
+        const routeCoordinates =
+            coordinates.map(
+                coord => [
+                    coord.lng,
+                    coord.lat
+                ]
+            );
+
+
+        const routeLine =
+            turf.lineString(
+                routeCoordinates
+            );
+
+
+        const bbox =
+            turf.bbox(
+                routeLine
+            );
+
+
+        const padding =
+            0.04;
+
+
+        const south =
+            bbox[1] - padding;
+
+        const west =
+            bbox[0] - padding;
+
+        const north =
+            bbox[3] + padding;
+
+        const east =
+            bbox[2] + padding;
+
+
+        const query = `
+
+            [out:json][timeout:60];
+
+            (
+
+                nwr["amenity"="hospital"]
+                (${south},${west},${north},${east});
+
+                nwr["amenity"="shelter"]
+                (${south},${west},${north},${east});
+
+                nwr["amenity"="fire_station"]
+                (${south},${west},${north},${east});
+
+                nwr["amenity"="police"]
+                (${south},${west},${north},${east});
+
+                nwr["amenity"="ambulance_station"]
+                (${south},${west},${north},${east});
+
+            );
+
+            out center tags;
+
+        `;
+
+
+        const response =
+            await fetch(
+                "https://overpass-api.de/api/interpreter",
+                {
+                    method:
+                        "POST",
+
+                    body:
+                        query
+                }
+            );
+
+
+        if (!response.ok) {
+
+            throw new Error(
+                "Facility request failed."
+            );
+
+        }
+
+
+        const data =
+            await response.json();
+
+
+        processRouteFacilities(
+            data.elements,
+            routeLine
+        );
+
+    }
+
+    catch(error) {
+
+        console.error(
+            "Facility error:",
+            error
+        );
+
+
+        document.getElementById(
+            "facilityResults"
+        ).innerHTML =
+
+            "<p class='small-note'>"
+            + "Unable to load facilities right now. "
+            + "Please try the route again."
+            + "</p>";
+
+    }
+
+}
+
+
+
+/* =========================================================
+   PROCESS FACILITIES
+========================================================= */
+
+function processRouteFacilities(
+    elements,
+    routeLine
+) {
+
+    realHospitals = [];
+
+    realShelters = [];
+
+    realFireStations = [];
+
+    realPoliceStations = [];
+
+    realAmbulanceStations = [];
+
+    currentRouteFacilities = [];
+
+
+    const MAX_DISTANCE_KM =
+        3;
+
+
+    elements.forEach(
+        element => {
+
+            let latitude =
+                element.lat;
+
+            let longitude =
+                element.lon;
+
+
+            if (
+                latitude === undefined &&
+                element.center
+            ) {
+
+                latitude =
+                    element.center.lat;
+
+                longitude =
+                    element.center.lon;
+
+            }
+
+
+            if (
+                latitude === undefined ||
+                longitude === undefined
+            ) {
+
+                return;
+
+            }
+
+
+            const point =
+                turf.point([
+                    longitude,
+                    latitude
+                ]);
+
+
+            const distance =
+                turf.pointToLineDistance(
+                    point,
+                    routeLine,
+                    {
+                        units:
+                            "kilometers"
+                    }
+                );
+
+
+            if (
+                distance >
+                MAX_DISTANCE_KM
+            ) {
+
+                return;
+
+            }
+
+
+            const tags =
+                element.tags || {};
+
+
+            let type =
+                "Facility";
+
+
+            if (
+                tags.amenity ===
+                "hospital"
+            ) {
+
+                type =
+                    "Hospital";
+
+            }
+
+            else if (
+                tags.amenity ===
+                "shelter"
+            ) {
+
+                type =
+                    "Shelter";
+
+            }
+
+            else if (
+                tags.amenity ===
+                "fire_station"
+            ) {
+
+                type =
+                    "Fire Station";
+
+            }
+
+            else if (
+                tags.amenity ===
+                "police"
+            ) {
+
+                type =
+                    "Police Station";
+
+            }
+
+            else if (
+                tags.amenity ===
+                "ambulance_station"
+            ) {
+
+                type =
+                    "Ambulance Station";
+
+            }
+
+
+            const facility = {
+
+                id:
+                    element.id,
+
+                type:
+                    type,
+
+                name:
+                    tags.name ||
+                    "Unnamed " + type,
+
+                lat:
+                    latitude,
+
+                lon:
+                    longitude,
+
+                distance:
+                    distance,
+
+                address:
+                    tags["addr:street"] ||
+                    tags["addr:full"] ||
+                    "",
+
+                phone:
+                    tags.phone ||
+                    tags["contact:phone"] ||
+                    "",
+
+                floodRisk:
+                    getFacilityFloodRisk(
+                        point
+                    )
+
+            };
+
+
+            currentRouteFacilities.push(
+                facility
+            );
+
+
+            if (
+                type === "Hospital"
+            ) {
+
+                realHospitals.push(
+                    facility
+                );
+
+            }
+
+            else if (
+                type === "Shelter"
+            ) {
+
+                realShelters.push(
+                    facility
+                );
+
+            }
+
+            else if (
+                type === "Fire Station"
+            ) {
+
+                realFireStations.push(
+                    facility
+                );
+
+            }
+
+            else if (
+                type === "Police Station"
+            ) {
+
+                realPoliceStations.push(
+                    facility
+                );
+
+            }
+
+            else if (
+                type === "Ambulance Station"
+            ) {
+
+                realAmbulanceStations.push(
+                    facility
+                );
+
+            }
+
+        }
+    );
+
+
+    sortFacilities();
+
+    addFacilityMarkers();
+
+    showFacilityResults();
+
+    updateDecisionDashboard();
+
+}
+
+
+
+/* =========================================================
+   FACILITY FLOOD RISK
+========================================================= */
+
+function getFacilityFloodRisk(
+    point
+) {
+
+    if (!floodZoneLayer) {
+
+        return "Unknown";
+
+    }
+
+
+    let detectedRisk =
+        "Outside sample zones";
+
+
+    floodZoneLayer.eachLayer(
+        layer => {
+
+            if (
+                layer.feature &&
+                layer.feature.geometry
+            ) {
+
+                const inside =
+                    turf.booleanPointInPolygon(
+                        point,
+                        layer.feature
+                    );
+
+
+                if (inside) {
+
+                    detectedRisk =
+                        layer.feature
+                        .properties
+                        .risk;
+
+                }
+
+            }
+
+        }
+    );
+
+
+    return detectedRisk;
+
+}
+
+
+
+/* =========================================================
+   FLOOD PRIORITY
+========================================================= */
+
+function floodRiskPriority(
+    risk
+) {
+
+    if (
+        risk === "High"
+    ) {
+
+        return 3;
+
+    }
+
+    if (
+        risk === "Medium"
+    ) {
+
+        return 2;
+
+    }
+
+    if (
+        risk === "Low"
+    ) {
+
+        return 1;
+
+    }
+
+    if (
+        risk ===
+        "Outside sample zones"
+    ) {
+
+        return 0;
+
+    }
+
+    return 4;
+
+}
+
+
+
+/* =========================================================
+   SORT
+========================================================= */
+
+function sortFacilities() {
+
+    currentRouteFacilities.sort(
+        (a, b) => {
+
+            const riskDifference =
+
+                floodRiskPriority(
+                    a.floodRisk
+                )
+
+                -
+
+                floodRiskPriority(
+                    b.floodRisk
+                );
+
+
+            if (
+                riskDifference !== 0
+            ) {
+
+                return riskDifference;
+
+            }
+
+
+            return (
+                a.distance -
+                b.distance
+            );
+
+        }
+    );
+
+}
+
+
+
+/* =========================================================
+   RECOMMENDED FACILITY
+========================================================= */
+
+function getRecommendedFacility(
+    type
+) {
+
+    const facilities =
+        currentRouteFacilities.filter(
+            facility =>
+                facility.type === type
+        );
+
+
+    if (!facilities.length) {
+
+        return null;
+
+    }
+
+
+    const safeFacilities =
+        facilities.filter(
+            facility =>
+
+                facility.floodRisk ===
+                "Outside sample zones"
+
+                ||
+
+                facility.floodRisk ===
+                "Low"
+
+        );
+
+
+    if (
+        safeFacilities.length
+    ) {
+
+        safeFacilities.sort(
+            (a, b) => {
+
+                const aRisk =
+                    floodRiskPriority(
+                        a.floodRisk
+                    );
+
+                const bRisk =
+                    floodRiskPriority(
+                        b.floodRisk
+                    );
+
+
+                if (
+                    aRisk !== bRisk
+                ) {
+
+                    return (
+                        aRisk -
+                        bRisk
+                    );
+
+                }
+
+
+                return (
+                    a.distance -
+                    b.distance
+                );
+
+            }
+        );
+
+
+        return safeFacilities[0];
+
+    }
+
+
+    facilities.sort(
+        (a, b) =>
+            a.distance -
+            b.distance
+    );
+
+
+    return facilities[0];
+
+}
+
+
+
+/* =========================================================
+   CREATE FACILITY MARKERS
+========================================================= */
+
+function createFacilityMarkers(
+    facilities,
+    iconSymbol
+) {
+
+    return facilities.map(
+        facility => {
+
+            const marker =
+                L.marker(
+                    [
+                        facility.lat,
+                        facility.lon
+                    ]
+                );
+
+
+            let floodColor =
+                "#0b7a4b";
+
+
+            if (
+                facility.floodRisk ===
+                "Medium"
+            ) {
+
+                floodColor =
+                    "#e09a00";
+
+            }
+
+
+            if (
+                facility.floodRisk ===
+                "High"
+            ) {
+
+                floodColor =
+                    "#c62828";
+
+            }
+
+
+            marker.bindPopup(
+
+                "<b>"
+                + iconSymbol
+                + " "
+                + facility.name
+                + "</b><br><br>"
+
+                + "<b>Type:</b> "
+                + facility.type
+                + "<br>"
+
+                + "<b>Distance from route:</b> "
+                + facility.distance.toFixed(2)
+                + " km<br>"
+
+                + "<b>Flood-zone status:</b> "
+                + "<span style='color:"
+                + floodColor
+                + "'><b>"
+                + facility.floodRisk
+                + "</b></span>"
+
+                + (
+                    facility.address
+                    ?
+                    "<br><b>Address:</b> "
+                    + facility.address
+                    :
+                    ""
+                )
+
+                + (
+                    facility.phone
+                    ?
+                    "<br><b>Phone:</b> "
+                    + facility.phone
+                    :
+                    ""
+                )
+
+            );
+
+
+            return marker;
+
+        }
+    );
+
+}
+
+
+
+/* =========================================================
+   ADD FACILITY MARKERS
+========================================================= */
+
+function addFacilityMarkers() {
+
+    clearFacilityLayers();
+
+
+    hospitalLayer.addLayers(
+        createFacilityMarkers(
+            realHospitals,
+            "🏥"
+        )
+    );
+
+
+    shelterLayer.addLayers(
+        createFacilityMarkers(
+            realShelters,
+            "🏠"
+        )
+    );
+
+
+    fireLayer.addLayers(
+        createFacilityMarkers(
+            realFireStations,
+            "🚒"
+        )
+    );
+
+
+    policeLayer.addLayers(
+        createFacilityMarkers(
+            realPoliceStations,
+            "👮"
+        )
+    );
+
+
+    ambulanceLayer.addLayers(
+        createFacilityMarkers(
+            realAmbulanceStations,
+            "🚑"
+        )
+    );
+
+
+    updateFacilityLayers();
+
+}
+
+
+
+/* =========================================================
+   UPDATE FACILITY LAYERS
+========================================================= */
+
+function updateFacilityLayers() {
+
+    removeFacilityLayers();
+
+
+    if (
+        document.getElementById(
+            "hospitalFilter"
+        ).checked
+    ) {
+
+        map.addLayer(
+            hospitalLayer
+        );
+
+    }
+
+
+    if (
+        document.getElementById(
+            "shelterFilter"
+        ).checked
+    ) {
+
+        map.addLayer(
+            shelterLayer
+        );
+
+    }
+
+
+    if (
+        document.getElementById(
+            "fireFilter"
+        ).checked
+    ) {
+
+        map.addLayer(
+            fireLayer
+        );
+
+    }
+
+
+    if (
+        document.getElementById(
+            "policeFilter"
+        ).checked
+    ) {
+
+        map.addLayer(
+            policeLayer
+        );
+
+    }
+
+
+    if (
+        document.getElementById(
+            "ambulanceFilter"
+        ).checked
+    ) {
+
+        map.addLayer(
+            ambulanceLayer
+        );
+
+    }
+
+}
+
+
+
+/* =========================================================
+   REMOVE FACILITY LAYERS
+========================================================= */
+
+function removeFacilityLayers() {
+
+    map.removeLayer(
+        hospitalLayer
+    );
+
+    map.removeLayer(
+        shelterLayer
+    );
+
+    map.removeLayer(
+        fireLayer
+    );
+
+    map.removeLayer(
+        policeLayer
+    );
+
+    map.removeLayer(
+        ambulanceLayer
+    );
+
+}
+
+
+
+/* =========================================================
+   CLEAR FACILITIES
+========================================================= */
+
+function clearFacilityLayers() {
+
+    hospitalLayer.clearLayers();
+
+    shelterLayer.clearLayers();
+
+    fireLayer.clearLayers();
+
+    policeLayer.clearLayers();
+
+    ambulanceLayer.clearLayers();
+
+    removeFacilityLayers();
+
+}
+
+
+
+/* =========================================================
+   FACILITY ICON
+========================================================= */
+
+function getFacilityIcon(
+    type
+) {
+
+    if (
+        type === "Hospital"
+    ) {
+
+        return "🏥";
+
+    }
+
+    if (
+        type === "Shelter"
+    ) {
+
+        return "🏠";
+
+    }
+
+    if (
+        type === "Fire Station"
+    ) {
+
+        return "🚒";
+
+    }
+
+    if (
+        type === "Police Station"
+    ) {
+
+        return "👮";
+
+    }
+
+    if (
+        type === "Ambulance Station"
+    ) {
+
+        return "🚑";
+
+    }
+
+    return "📍";
+
+}
+
+
+
+/* =========================================================
+   SHOW FACILITY RESULTS
+========================================================= */
+
+function showFacilityResults() {
+
+    const container =
+        document.getElementById(
+            "facilityResults"
+        );
+
+
+    if (
+        !currentRouteFacilities.length
+    ) {
+
+        container.innerHTML =
+
+            "<p class='small-note'>"
+            + "No mapped emergency facilities "
+            + "were found within 3 km of the route."
+            + "</p>";
+
+        return;
+
+    }
+
+
+    let html = "";
+
+
+    html +=
+
+        "<div class='small-note' "
+        + "style='margin-bottom:10px;'>"
+
+        + "<b>"
+        + currentRouteFacilities.length
+        + "</b> mapped facilities found within "
+        + "<b>3 km</b> of the selected route."
+
+        + "</div>";
+
+
+    const categories = [
+
+        {
+            type:
+                "Hospital",
+
+            icon:
+                "🏥"
+        },
+
+        {
+            type:
+                "Shelter",
+
+            icon:
+                "🏠"
+        },
+
+        {
+            type:
+                "Fire Station",
+
+            icon:
+                "🚒"
+        },
+
+        {
+            type:
+                "Police Station",
+
+            icon:
+                "👮"
+        },
+
+        {
+            type:
+                "Ambulance Station",
+
+            icon:
+                "🚑"
+        }
+
+    ];
+
+
+    categories.forEach(
+        category => {
+
+            const recommended =
+                getRecommendedFacility(
+                    category.type
+                );
+
+
+            if (!recommended) {
+
+                return;
+
+            }
+
+
+            const isRisky =
+                recommended.floodRisk ===
+                "High";
+
+
+            html +=
+
+                "<div class='"
+                + (
+                    isRisky
+                    ?
+                    "warning-box"
+                    :
+                    "recommendation-box"
+                )
+                + "'>"
+
+                + "<b>"
+                + category.icon
+                + " Recommended "
+                + category.type
+                + "</b><br><br>"
+
+                + "<b>"
+                + recommended.name
+                + "</b><br>"
+
+                + "Distance from route: "
+                + recommended.distance.toFixed(2)
+                + " km<br>"
+
+                + "Flood-zone status: "
+                + "<b>"
+                + recommended.floodRisk
+                + "</b>"
+
+                + (
+                    isRisky
+                    ?
+                    "<br><br>⚠️ No safer mapped "
+                    + category.type.toLowerCase()
+                    + " was found in the current route search area."
+                    :
+                    "<br><br>✅ Selected using the "
+                    + "prototype flood-aware facility "
+                    + "decision rule."
+                )
+
+                + "</div>";
+
+        }
+    );
+
+
+    html +=
+        "<hr><b>Nearby Facility Details</b>";
+
+
+    currentRouteFacilities.forEach(
+        facility => {
+
+            const risky =
+                facility.floodRisk ===
+                "High";
+
+
+            html +=
+
+                "<div class='facility-card "
+                + (
+                    risky
+                    ?
+                    "risky"
+                    :
+                    ""
+                )
+                + "'>"
+
+                + "<h4>"
+                + getFacilityIcon(
+                    facility.type
+                )
+                + " "
+                + facility.name
+                + "</h4>"
+
+                + "<b>Type:</b> "
+                + facility.type
+                + "<br>"
+
+                + "<b>Distance from route:</b> "
+                + facility.distance.toFixed(2)
+                + " km<br>"
+
+                + "<b>Flood-zone status:</b> "
+                + facility.floodRisk
+
+                + (
+                    facility.address
+                    ?
+                    "<br><b>Address:</b> "
+                    + facility.address
+                    :
+                    ""
+                )
+
+                + (
+                    facility.phone
+                    ?
+                    "<br><b>Phone:</b> "
+                    + facility.phone
+                    :
+                    ""
+                )
+
+                + (
+                    risky
+                    ?
+                    "<br><br>⚠️ Facility lies inside "
+                    + "a high-risk sample flood zone."
+                    :
+                    ""
+                )
+
+                + "</div>";
+
+        }
+    );
+
+
+    container.innerHTML =
+        html;
+
+}
+
+
+
+/* =========================================================
+   DECISION DASHBOARD
+========================================================= */
+
+function updateDecisionDashboard() {
+
+    const dashboard =
+        document.getElementById(
+            "decisionDashboard"
+        );
+
+
+    if (
+        !startPoint ||
+        !destinationPoint
+    ) {
+
+        dashboard.innerHTML =
+
+            "<p class='small-note'>"
+            + "Select start and destination "
+            + "to generate the dashboard."
+            + "</p>";
+
+        return;
+
+    }
+
+
+    const distanceText =
+        currentRouteDistance > 0
+
+        ?
+
+        (
+            currentRouteDistance /
+            1000
+        ).toFixed(2)
+        + " km"
+
+        :
+
+        "Calculating...";
+
+
+    const timeText =
+        currentRouteTime > 0
+
+        ?
+
+        Math.round(
+            currentRouteTime /
+            60
+        )
+        + " min"
+
+        :
+
+        "Calculating...";
+
+
+    let floodStatus =
+        "Not analysed";
+
+
+    if (
+        routeHighCount > 0
+    ) {
+
+        floodStatus =
+            "HIGH RISK";
+
+    }
+
+    else if (
+        routeMediumCount > 0
+    ) {
+
+        floodStatus =
+            "MEDIUM RISK";
+
+    }
+
+    else if (
+        currentRouteDistance > 0
+    ) {
+
+        floodStatus =
+            "No sample risk detected";
+
+    }
+
+
+    const hospital =
+        getRecommendedFacility(
+            "Hospital"
+        );
+
+
+    const shelter =
+        getRecommendedFacility(
+            "Shelter"
+        );
+
+
+    let recommendationHTML = "";
+
+
+    if (hospital) {
+
+        recommendationHTML +=
+
+            "🏥 <b>Hospital:</b> "
+            + hospital.name
+            + " — "
+            + hospital.distance.toFixed(2)
+            + " km from route"
+            + " — "
+            + hospital.floodRisk
+            + "<br>";
+
+    }
+
+
+    if (shelter) {
+
+        recommendationHTML +=
+
+            "🏠 <b>Shelter:</b> "
+            + shelter.name
+            + " — "
+            + shelter.distance.toFixed(2)
+            + " km from route"
+            + " — "
+            + shelter.floodRisk
+            + "<br>";
+
+    }
+
+
+    if (
+        !recommendationHTML
+    ) {
+
+        recommendationHTML =
+            "No recommended facility available "
+            + "in the current route search area.";
+
+    }
+
+
+    const mainClass =
+        routeHighCount > 0
+        ?
+        "dashboard-warning"
+        :
+        "dashboard-recommendation";
+
+
+    dashboard.innerHTML =
+
+        "<div class='dashboard-grid'>"
+
+
+        + "<div class='dashboard-card'>"
+        + "<b>🚩 Start</b>"
+        + "<span class='dashboard-value'>"
+        + startPoint.lat.toFixed(4)
+        + ", "
+        + startPoint.lng.toFixed(4)
+        + "</span>"
+        + "</div>"
+
+
+        + "<div class='dashboard-card'>"
+        + "<b>🏁 Destination</b>"
+        + "<span class='dashboard-value'>"
+        + destinationPoint.lat.toFixed(4)
+        + ", "
+        + destinationPoint.lng.toFixed(4)
+        + "</span>"
+        + "</div>"
+
+
+        + "<div class='dashboard-card'>"
+        + "<b>🛣️ Route Distance</b>"
+        + "<span class='dashboard-value'>"
+        + distanceText
+        + "</span>"
+        + "</div>"
+
+
+        + "<div class='dashboard-card'>"
+        + "<b>⏱️ Travel Time</b>"
+        + "<span class='dashboard-value'>"
+        + timeText
+        + "</span>"
+        + "</div>"
+
+
+        + "<div class='dashboard-card'>"
+        + "<b>🌧️ Current Precipitation</b>"
+        + "<span class='dashboard-value'>"
+        + (
+            currentRainfall !== null
+            ?
+            currentRainfall + " mm"
+            :
+            "Unavailable"
+        )
+        + "</span>"
+        + "</div>"
+
+
+        + "<div class='dashboard-card'>"
+        + "<b>⚠️ Route Flood Status</b>"
+        + "<span class='dashboard-value'>"
+        + floodStatus
+        + "</span>"
+        + "</div>"
+
+
+        + "<div class='dashboard-card'>"
+        + "<b>🏥 Hospitals</b>"
+        + "<span class='dashboard-value'>"
+        + realHospitals.length
+        + "</span>"
+        + "</div>"
+
+
+        + "<div class='dashboard-card'>"
+        + "<b>🏠 Shelters</b>"
+        + "<span class='dashboard-value'>"
+        + realShelters.length
+        + "</span>"
+        + "</div>"
+
+
+        + "<div class='dashboard-card'>"
+        + "<b>🚒 Fire Stations</b>"
+        + "<span class='dashboard-value'>"
+        + realFireStations.length
+        + "</span>"
+        + "</div>"
+
+
+        + "<div class='dashboard-card'>"
+        + "<b>👮 Police Stations</b>"
+        + "<span class='dashboard-value'>"
+        + realPoliceStations.length
+        + "</span>"
+        + "</div>"
+
+
+        + "<div class='dashboard-card'>"
+        + "<b>🚑 Ambulance Stations</b>"
+        + "<span class='dashboard-value'>"
+        + realAmbulanceStations.length
+        + "</span>"
+        + "</div>"
+
+
+        + "<div class='"
+        + mainClass
+        + "'>"
+
+        + "<b>⭐ Emergency Facility Recommendation</b>"
+        + "<br><br>"
+        + recommendationHTML
+
+        + "</div>"
+
+
+        + "</div>";
+
+}
+
+
+
+/* =========================================================
+   RESET
+========================================================= */
+
+function resetApplication() {
+
+    startPoint = null;
+
+    destinationPoint = null;
+
+    currentRouteCoordinates = [];
+
+    currentRouteLine = null;
+
+    currentRouteFacilities = [];
+
+    currentRainfall = null;
+
+    currentRouteDistance = 0;
+
+    currentRouteTime = 0;
+
+    routeHighCount = 0;
+
+    routeMediumCount = 0;
+
+    routeLowCount = 0;
+
+
+    if (startMarker) {
+
+        map.removeLayer(
+            startMarker
+        );
+
+        startMarker = null;
+
+    }
+
+
+    if (destinationMarker) {
+
+        map.removeLayer(
+            destinationMarker
+        );
+
+        destinationMarker = null;
+
+    }
+
+
+    if (routingControl) {
+
+        map.removeControl(
+            routingControl
+        );
+
+        routingControl = null;
+
+    }
+
+
+    if (alternativeRouteLayer) {
+
+        map.removeLayer(
+            alternativeRouteLayer
+        );
+
+        alternativeRouteLayer = null;
+
+    }
+
+
+    clearFacilityLayers();
+
+
+    document.getElementById(
+        "generalSearch"
+    ).value = "";
+
+
+    document.getElementById(
+        "startSearch"
+    ).value = "";
+
+
+    document.getElementById(
+        "destinationSearch"
+    ).value = "";
+
+
+    document.getElementById(
+        "weatherBox"
+    ).innerHTML =
+        "Search a location to load current weather.";
+
+
+    document.getElementById(
+        "routeSummary"
+    ).innerHTML =
+        "Select start and destination to calculate route.";
+
+
+    document.getElementById(
+        "decisionDashboard"
+    ).innerHTML =
+
+        "<p class='small-note'>"
+        + "Calculate an emergency route to generate "
+        + "the decision summary."
+        + "</p>";
+
+
+    document.getElementById(
+        "routeLocations"
+    ).innerHTML =
+
+        "<p class='small-note'>"
+        + "Start and destination locations "
+        + "will appear here."
+        + "</p>";
+
+
+    document.getElementById(
+        "facilityResults"
+    ).innerHTML =
+
+        "<p class='small-note'>"
+        + "Calculate a route to find emergency facilities."
+        + "</p>";
+
+
+    setRouteStatus(
+        "Waiting for route calculation.",
+        "safe"
+    );
+
+
+    map.setView(
+        [22.5, 79.0],
+        5
+    );
+
+}
+
+
+
+/* =========================================================
+   ENTER KEY SUPPORT
+========================================================= */
+
+document.getElementById(
+    "generalSearch"
+).addEventListener(
+    "keydown",
+    function(event) {
+
+        if (
+            event.key === "Enter"
+        ) {
+
+            searchGeneralLocation();
+
+        }
+
+    }
+);
+
+
+document.getElementById(
+    "startSearch"
+).addEventListener(
+    "keydown",
+    function(event) {
+
+        if (
+            event.key === "Enter"
+        ) {
+
+            searchStartLocation();
+
+        }
+
+    }
+);
+
+
+document.getElementById(
+    "destinationSearch"
+).addEventListener(
+    "keydown",
+    function(event) {
+
+        if (
+            event.key === "Enter"
+        ) {
+
+            searchDestinationLocation();
+
+        }
+
+    }
+);
+
+
+
+/* =========================================================
+   MAP LEGEND
+========================================================= */
+
+const legend =
+    L.control({
+        position:
+            "bottomright"
+    });
+
+
+legend.onAdd =
+    function() {
+
+        const div =
+            L.DomUtil.create(
+                "div",
+                "legend"
+            );
+
+
+        div.innerHTML =
+
+            "<div class='legend-title'>"
+            + "Map Legend"
+            + "</div>"
+
+
+            + "<div class='legend-item'>"
+            + "<span class='legend-color' "
+            + "style='background:#28a745'></span>"
+            + " Low Risk"
+            + "</div>"
+
+
+            + "<div class='legend-item'>"
+            + "<span class='legend-color' "
+            + "style='background:#ff9800'></span>"
+            + " Medium Risk"
+            + "</div>"
+
+
+            + "<div class='legend-item'>"
+            + "<span class='legend-color' "
+            + "style='background:#dc3545'></span>"
+            + " High Risk"
+            + "</div>"
+
+
+            + "<div class='legend-item'>"
+            + "<span class='legend-color' "
+            + "style='background:#0077b6'></span>"
+            + " Emergency Route"
+            + "</div>"
+
+
+            + "<div>🏥 Hospital</div>"
+            + "<div>🏠 Shelter</div>"
+            + "<div>🚒 Fire Station</div>"
+            + "<div>👮 Police</div>"
+            + "<div>🚑 Ambulance</div>";
+
+
+        return div;
+
+    };
+
+
+legend.addTo(map);
+
+</script>
+
+</body>
+
+</html>

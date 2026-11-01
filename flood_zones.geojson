@@ -1,0 +1,66 @@
+{
+  "type": "FeatureCollection",
+  "features": [
+
+    {
+      "type": "Feature",
+      "properties": {
+        "risk": "Low",
+        "description": "Low flood risk zone"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [77.5700, 12.9900],
+            [77.5900, 12.9900],
+            [77.5900, 13.0000],
+            [77.5700, 13.0000],
+            [77.5700, 12.9900]
+          ]
+        ]
+      }
+    },
+
+    {
+      "type": "Feature",
+      "properties": {
+        "risk": "Medium",
+        "description": "Medium flood risk zone"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [77.6000, 12.9600],
+            [77.6200, 12.9600],
+            [77.6200, 12.9700],
+            [77.6000, 12.9700],
+            [77.6000, 12.9600]
+          ]
+        ]
+      }
+    },
+
+    {
+      "type": "Feature",
+      "properties": {
+        "risk": "High",
+        "description": "High flood risk zone"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [77.5800, 12.9400],
+            [77.6000, 12.9400],
+            [77.6000, 12.9500],
+            [77.5800, 12.9500],
+            [77.5800, 12.9400]
+          ]
+        ]
+      }
+    }
+
+  ]
+}
